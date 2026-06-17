@@ -3,7 +3,11 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Bar
+  - Ball
+  - Sidewall
+  - Block
   layers:
   - Default
   - TransparentFX
