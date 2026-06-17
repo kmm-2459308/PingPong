@@ -124,12 +124,12 @@ public class NetworkController{
 
 		// 同一の端末で実行できるようにポート番号をずらしています.
 		// 別々の端末で実行する場合はポート番号が同じものを使います.
-		int listeningPort = isHost? NetConfig.GAME_PORT : NetConfig.GAME_PORT + 1;
+		int listeningPort = isHost? NetConfig.GAME_PORT : NetConfig.SERVER_PORT;
 		m_transport.StartServer(listeningPort);
 
 		// 同一の端末で実行できるようにポート番号をずらしています.
 		// 別々の端末で実行する場合はポート番号が同じものを使います.
-		int remotePort = isHost? NetConfig.GAME_PORT + 1 : NetConfig.GAME_PORT;
+		int remotePort = isHost? NetConfig.SERVER_PORT: NetConfig.GAME_PORT;
 		m_transport.Connect(hostAddress, remotePort);
 
         // 接続・切断イベント通知用の イベント登録

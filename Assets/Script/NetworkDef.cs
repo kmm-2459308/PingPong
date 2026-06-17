@@ -10,8 +10,8 @@ public class NetConfig
 {
 	public static int PLAYER_MAX = 4;
 
-	public static int SERVER_PORT = 50764;
-	public static int GAME_PORT = 50765;
+	public static int SERVER_PORT = 8000;
+	public static int GAME_PORT = 3000;
 }
 
 // イベントの種類.
