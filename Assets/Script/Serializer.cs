@@ -20,24 +20,21 @@ using System.Runtime.InteropServices;
 
 public class Serializer
 {
-    // バイナリデータ保存用ストリーム P.157
-    //・・・
+    // バイナリデータ保存用ストリーム.
     private MemoryStream m_buffer = null;
-    // 追加位置のオフセット P.157
-    //・・・
+
+    // 追加位置のオフセット
     private int m_offset = 0;
 
-    // 実行している端末のエンディアンの種類. P.161
-    //・・・
+    // 実行している端末のエンディアンの種類.
     private Endianness m_endianness;
-    // エンディアン. P.161
-    //・・・
+
+    // エンディアン.
     public enum Endianness
     {
-        BigEndian = 0,
-        LittleEndian,
+        BigEndian = 0,      // ビッグエンディアン.
+        LittleEndian,       // リトルエンディアン.
     }
-
 
     //
     // コンストラクタ.
@@ -100,7 +97,7 @@ public class Serializer
     }
 
     //
-    // bool型のデータをシリアライズ
+    // bool型のデータをシリアライズ.
     //
     protected bool Serialize(bool element)
     {
@@ -160,12 +157,12 @@ public class Serializer
     }
 
     //
-    // int型のデータをシリアライズ. P.157
+    // int型のデータをシリアライズ.
     //
-    //・・・
-    private bool Serialize(int element)
+    protected bool Serialize(int element)
     {
         byte[] data = BitConverter.GetBytes(element);
+
         return WriteBuffer(data, sizeof(int));
     }
 
@@ -512,19 +509,27 @@ public class Serializer
     }
 
     //
-    // バイトオーダー変更後のデータをストリームに追加. P.157
+    // バイトオーダー変更後のデータをストリームに追加.
     //
-    //・・・
-    private bool WriteBuffer(byte[] data,int size)
+    protected bool WriteBuffer(byte[] data, int size)
     {
-        if(m_endianness == GetEndianness.LittleEndian)
+        // 書き込む値をネットワークバイトオーダーに変換します.
+        if (m_endianness == Endianness.LittleEndian)
         {
             Array.Reverse(data);
         }
 
-        m_buffer.Position=m_offset;
-        m_buffer.Write(data, 0, size);
-        m_offset += size;
+        // 現在のオフセットからデータを書き込みます.
+        try
+        {
+            m_buffer.Position = m_offset;
+            m_buffer.Write(data, 0, size);
+            m_offset += size;
+        }
+        catch
+        {
+            return false;
+        }
 
         return true;
     }
