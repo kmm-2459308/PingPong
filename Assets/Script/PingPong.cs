@@ -26,7 +26,7 @@
 /// Time.timeScale = 0
 ///
 
-#if true
+#if false
 
 using UnityEngine;
 using UnityEngine.SceneManagement;

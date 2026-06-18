@@ -11,7 +11,7 @@
 // OnEventHandling() 関数をイベントハンドラーとして登録して対戦相手が接続/切断したときのイベントを処理します.
 //
 
-#if true
+#if false
 
 //#define EMURATE_INPUT //デバッグ中入力.
 //#define DEBUG_WRITE
@@ -598,12 +598,14 @@ public class NetworkController{
         m_transport = nObj.GetComponent<TransportUDP>();
 		// 同一の端末で実行できるようにポート番号をずらしています.
 		// 別々の端末で実行する場合はポート番号が同じものを使います.
-		int listeningPort = isHost? NetConfig.GAME_PORT : NetConfig.GAME_PORT + 1;
-		m_transport.StartServer(listeningPort);
+		int listeningPort = //isHost? NetConfig.GAME_PORT : NetConfig.GAME_PORT + 1;
+        NetConfig.GAME_PORT;
+        m_transport.StartServer(listeningPort);
 		// 同一の端末で実行できるようにポート番号をずらしています.
 		// 別々の端末で実行する場合はポート番号が同じものを使います.
-		int remotePort = isHost? NetConfig.GAME_PORT + 1 : NetConfig.GAME_PORT;
-		m_transport.Connect(hostAddress, remotePort);
+		int remotePort = //isHost? NetConfig.GAME_PORT + 1 : NetConfig.GAME_PORT;
+            NetConfig.SERVER_PORT;
+        m_transport.Connect(hostAddress, remotePort);
 
         // 接続・切断イベント通知用の イベント登録
         m_transport.RegisterEventHandler(OnEventHandling);
