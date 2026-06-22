@@ -1,4 +1,337 @@
-﻿using UnityEngine;
+﻿// 「ステージ開始 → プレイ → 制限時間終了またはクリア → ステージ切替 → 次のステージ → 全ステージ終了」
+/*
+■ 変数の役割
+
+public GameObject[] m_stagePrefabs;
+
+ステージのプレハブを登録する配列。
+
+例:
+  Stage1
+  Stage2
+  Stage3
+
+を登録しておく。
+
+
+GameObject m_timerObj;
+
+タイマー表示オブジェクト。
+
+
+float m_gameTime;
+
+現在のゲーム経過時間。
+
+
+int m_gameCount;
+
+現在何ステージ目か。
+
+
+const int GAMECOUNT_MAX = 3;
+
+全3ステージ。
+
+
+const int TIME_LIMIT = 30;
+
+1ステージ30秒。
+
+
+
+■ State列挙型
+
+enum State
+{
+    GameIn,
+    Game,
+    GameChanging,
+    GameOut,
+    GameEnd
+}
+
+ゲームの状態を表している。
+
+GameIn
+  ゲーム開始準備
+
+Game
+  プレイ中
+
+GameChanging
+  ステージ切替演出中
+
+GameOut
+  ステージ終了処理中
+
+GameEnd
+  全ゲーム終了
+
+
+
+■ Start()
+
+ゲーム開始時に1回呼ばれる。
+
+m_timerObj = GameObject.Find("Timer");
+
+Timerオブジェクト取得。
+
+m_state = State.GameIn;
+
+最初はゲーム開始準備状態。
+
+m_gameTime = 0;
+m_gameCount = 0;
+
+時間とステージ番号を初期化。
+
+
+
+■ FixedUpdate()
+
+毎フレーム呼ばれる。
+
+状態によって処理を分けている。
+
+switch (m_state)
+
+例えば
+
+State.Game
+
+なら
+
+UpdateGame();
+
+が実行される。
+
+
+
+■ UpdateGameIn()
+
+ゲーム開始準備。
+
+【ステージ生成】
+
+GameObject stage = GameObject.Find("Stage");
+
+ステージが存在するか確認。
+
+無ければ
+
+Instantiate(m_stagePrefabs[m_gameCount]);
+
+現在のステージを生成。
+
+例:
+
+m_gameCount = 0
+
+なら
+
+m_stagePrefabs[0]
+
+を生成。
+
+
+【フェードイン待ち】
+
+if (b.IsFadeIn())
+{
+    return;
+}
+
+ブロックの登場アニメーションが終わるまで待機。
+
+
+【プレイ開始】
+
+m_state = State.Game;
+
+ゲーム状態へ。
+
+bar.SetShotEnable(true);
+
+プレイヤーがボール発射可能になる。
+
+
+
+■ UpdateGame()
+
+プレイ中。
+
+【時間加算】
+
+m_gameTime += Time.fixedDeltaTime;
+
+
+【ブロック全破壊】
+
+if (blocks.Length == 0)
+
+クリア。
+
+
+【時間切れ】
+
+if (m_gameTime > TIME_LIMIT)
+
+30秒超えた。
+
+
+どちらかなら
+
+m_state = State.GameChanging;
+
+へ移行。
+
+
+
+■ UpdateGameChanging()
+
+ステージ終了演出。
+
+
+【ブロックをフェードアウト】
+
+b.FadeOut();
+
+
+【ボール削除】
+
+Destroy(obj);
+
+画面上の弾を全部消す。
+
+
+【発射禁止】
+
+bar.SetShotEnable(false);
+
+プレイヤー操作停止。
+
+
+【次の状態へ】
+
+m_state = State.GameOut;
+
+
+
+■ UpdateGameOut()
+
+ステージ終了処理。
+
+
+【フェードアウト完了待ち】
+
+if (b.IsFadeOut())
+{
+    return;
+}
+
+アニメーション終了待ち。
+
+
+【ステージ削除】
+
+Destroy(GameObject.Find("Stage"));
+
+現在ステージを消す。
+
+
+【ステージ数を進める】
+
+++m_gameCount;
+
+
+【3ステージ終了？】
+
+if (m_gameCount == GAMECOUNT_MAX)
+
+つまり
+
+3 == 3
+
+なら
+
+m_state = State.GameEnd;
+
+
+そうでなければ
+
+m_state = State.GameIn;
+
+次ステージへ。
+
+
+
+■ タイマー表示
+
+毎フレーム
+
+float t = Mathf.Max(TIME_LIMIT - m_gameTime, 0);
+
+残り時間を計算。
+
+例:
+
+経過時間    表示
+0秒         30
+10秒        20
+25秒        5
+31秒        0
+
+number.SetNum((int)t);
+
+画面の数字に表示。
+
+
+
+■ IsEnd()
+
+public bool IsEnd()
+{
+    return (m_state == State.GameEnd);
+}
+
+ゲーム終了判定。
+
+他のスクリプトから
+
+if(gameController.IsEnd())
+{
+    // リザルト画面へ
+}
+
+のように使える。
+
+
+
+■ 全体の流れ
+
+GameIn
+ ↓
+Game
+ ↓
+GameChanging
+ ↓
+GameOut
+ ↓
+次ステージ
+ ↓
+GameIn
+ ↓
+...
+ ↓
+GameEnd
+
+状態遷移（State Machine）によってゲーム全体を管理している。
+ 
+ */
+
+using UnityEngine;
 using System.Collections;
 
 /** ゲームシーケンス担当 */

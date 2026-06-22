@@ -62,18 +62,29 @@ public class TransportUDP : MonoBehaviour {
 	
 	// 受信バッファ.
 	private PacketQueue		m_recvQueue;
-	
-
-	// 送受信用のパケットの最大サイズ.
-	// バッファのサイズはMTUの設定によって決まります.(MTU:1回に送信できる最大のデータサイズ)
-	// イーサネットの最大MTUは1500bytesです.
-	// この値はOSや端末などで異なるものですのでバッファのサイズは
-	// 動作させる環境のMTUを調べて設定しましょう.
-	private const int		m_packetSize = 1400;
 
 
-	// タイムアウト時間.
-	private const int 		m_timeOutSec = 5;
+    // 送受信用のパケットの最大サイズ.
+    // バッファのサイズはMTUの設定によって決まります.(MTU:1回に送信できる最大のデータサイズ)
+    // イーサネットの最大MTUは1500bytesです.
+    // この値はOSや端末などで異なるものですのでバッファのサイズは
+    // 動作させる環境のMTUを調べて設定しましょう.
+    private const int		m_packetSize = 1400;
+
+    // パケット最大サイズ取得用プロパティ
+    public int GetPacketSize
+    {
+        get { return m_packetSize; }
+    }
+
+    // この二つは配列のサイズ1400を想定してるので、オート変数で扱うにはGCの負担が大きすぎ。メンバ変数に置き換える
+    // メモリ清掃コストをなくす
+    private byte[] m_recvBuffer;
+    private byte[] m_sendBuffer;
+
+
+    // タイムアウト時間.
+    private const int 		m_timeOutSec = 5;
 
 	private DateTime		m_ticker;
 
@@ -93,7 +104,10 @@ public class TransportUDP : MonoBehaviour {
 		// 送受信バッファを作成します.
 		m_sendQueue = new PacketQueue();
 		m_recvQueue = new PacketQueue();
-	}
+
+        m_recvBuffer = new byte[m_packetSize];
+        m_sendBuffer = new byte[m_packetSize];
+    }
 	
 	// Update is called once per frame
 	void FixedUpdate()
@@ -112,17 +126,20 @@ public class TransportUDP : MonoBehaviour {
 	// 待ち受け開始.
 	public bool StartServer(int port)
 	{
-		Debug.Log("Start server called[Port:" + port + "]");
-		
-		// リスニングソケットを生成します.
-		try {
+		Debug.Log("サーバーを起動する[Port:" + port + "]");
+
+        // リスニングソケットを生成します.
+        // OS側でソケット作成に失敗した場合は例外が発生するためtryで保護します
+        try
+        {
 			if (m_socket == null) {
 				m_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			}
 			m_socket.Bind(new IPEndPoint(IPAddress.Any, port));
 		}
 		catch {
-			return false;
+            // Bind失敗時はサーバー開始できないためfalseを返します。
+            return false;
 		}
 
 		m_isServer = true;
@@ -149,15 +166,17 @@ public class TransportUDP : MonoBehaviour {
 		m_isServer = false;
 		m_isStarted = false;
 
-		Debug.Log("Server stopped.");
+		Debug.Log("サーバーが停止しました.");
 	}
 
     // 接続処理.
 	public bool Connect(string address, int port)
 	{
-		Debug.Log("TransportUdp::Connect called.[Port:" + port + "]");
+		Debug.Log("TransportUdp の Connect が呼び出されました.[Port:" + port + "]");
 
-		try {
+        // アドレス不正、ネットワークエラー、Socket生成失敗などで例外が発生する可能性をtryで吸収します。
+        try
+        {
 			if (m_socket == null) {
 				m_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			}
@@ -168,7 +187,7 @@ public class TransportUDP : MonoBehaviour {
 			m_socket.Connect(address, port);
 		}
 		catch {
-			Debug.Log("TransportUdp::Connect failed.");
+			Debug.Log("TransportUdp Connectに失敗しました.");
 			return false;
 		}
 
@@ -190,7 +209,7 @@ public class TransportUDP : MonoBehaviour {
 			m_handler(state);
 		}
 
-		Debug.Log("TransportUdp::Connect success.");
+		Debug.Log("TransportUdp::Connect 成功.");
 
 		return ret;
 	}
@@ -200,7 +219,9 @@ public class TransportUDP : MonoBehaviour {
 	{
 		if (m_socket != null) {
             // ソケットをクローズします.
-			try {
+            // すでに閉じられている場合やOS側のエラーで SocketExceptionが発生する場合をtryで吸収します
+            try
+            {
 				m_socket.Close();
 				m_socket = null;
 			}
@@ -221,7 +242,7 @@ public class TransportUDP : MonoBehaviour {
 
 		m_isStarted = false;
 		m_isConnected = false;
-		Debug.Log("TransportTcp::Disconnect called.");
+		Debug.Log("TransportTcp::Disconnect が呼び出されました.");
 
 		return true;
 	}
@@ -258,7 +279,9 @@ public class TransportUDP : MonoBehaviour {
 	// イベント通知関数登録.
 	public void RegisterEventHandler(EventHandler handler)
 	{
-		m_handler += handler;
+        // 通信スレッドかイベントハンドラを呼ぶので Unity API を触るときは注意！
+        Debug.Log("イベントハンドラを登録する");
+        m_handler += handler;
 	}
 	
 	// イベント通知関数削除.
@@ -270,14 +293,16 @@ public class TransportUDP : MonoBehaviour {
 	// スレッド起動関数.
 	bool LaunchThread()
 	{
-		try {
+        // スレッド作成失敗やOSのリソース不足の場合、Thread.Start()で例外が発生する場合tryで吸収します（エラーで返すだけですけど)
+        try
+        {
 			// Dispatch用のスレッドを起動します.
 			m_thread = new Thread(new ThreadStart(Dispatch));
 			m_isStarted = true;	
 			m_thread.Start();
 		}
 		catch {
-			Debug.Log("Cannot launch thread.");
+			Debug.Log("スレッドを起動できませんでした.");
 			return false;
 		}
 		
@@ -295,9 +320,9 @@ public class TransportUDP : MonoBehaviour {
 			if (m_socket != null) {			
 				// 送信処理.
 				DispatchSend();
-				
-				// 受信処理.
-				DispatchReceive();
+
+                // 受信処理.
+                DispatchReceive();
 
 				// タイムアウト処理.
 				CheckTimeout();
@@ -309,12 +334,20 @@ public class TransportUDP : MonoBehaviour {
 
 	// 通信相手の待ち受け.
 	void AcceptClient()
-	{
-		if (m_isConnected == false &&
+    {
+        if (!m_isConnected)
+        {
+            Debug.Log("Accept待機");
+        }
+
+        if (m_isConnected == false &&
 			m_socket != null && 
 		    m_socket.Poll(0, SelectMode.SelectRead)) {
-			// クライアントから接続されました.
-			m_isConnected = true;
+
+            Debug.Log("Accept成功");
+
+            // クライアントから接続されました.
+            m_isConnected = true;
 			// 通信開始時刻を記録します.
 			m_ticker = DateTime.Now;
 
@@ -327,7 +360,7 @@ public class TransportUDP : MonoBehaviour {
 				state.result = NetEventResult.Success;
 				m_handler(state);
 			}
-		}
+        }
 	}
 
 	// スレッド側の送信処理.
@@ -337,17 +370,20 @@ public class TransportUDP : MonoBehaviour {
 			return;
 		}
 
-		try {
+        // Socketが切断されている、ネットワークエラーが発生した場合に 例外が発生する可能性があります。
+        try
+        {
 			// 送信処理.
-			if (m_socket.Poll(0, SelectMode.SelectWrite)) {
-				byte[] buffer = new byte[m_packetSize];
+			if (m_socket.Poll(0, SelectMode.SelectWrite) )// このソケットに今、読み取り可能なデータが来ているか確認する処理
+            {
+                m_sendBuffer = new byte[m_packetSize];
 				
 				// Send関数でバッファリングされたデータを取り出して送信を行います.
-				int sendSize = m_sendQueue.Dequeue(ref buffer, buffer.Length);
+				int sendSize = m_sendQueue.Dequeue(ref m_sendBuffer, m_sendBuffer.Length);
                 // 送信データがなくなるまで送信を続けます.
 				while (sendSize > 0) {
-					m_socket.Send(buffer, sendSize, SocketFlags.None);	
-					sendSize = m_sendQueue.Dequeue(ref buffer, buffer.Length);
+					m_socket.Send(m_sendBuffer, sendSize, SocketFlags.None);	
+					sendSize = m_sendQueue.Dequeue(ref m_sendBuffer, m_sendBuffer.Length);
 				}
 			}
 		}
@@ -362,12 +398,15 @@ public class TransportUDP : MonoBehaviour {
 			return;
 		}
 
-		// 受信処理.
-		try {
-			while (m_socket.Poll(0, SelectMode.SelectRead)) {
-				byte[] buffer = new byte[m_packetSize];
+        // 受信処理.
+        // 相手切断やSocketクローズ、ネットワーク異常などで例外が発生する可能性があります。
+        try
+        {
+			while (m_socket.Poll(0, SelectMode.SelectRead) ) // このソケットに今、読み取り可能なデータが来ているか確認する処理
+            {
+				m_recvBuffer = new byte[m_packetSize];
 
-				int recvSize = m_socket.Receive(buffer, buffer.Length, SocketFlags.None);
+				int recvSize = m_socket.Receive(m_recvBuffer, m_recvBuffer.Length, SocketFlags.None);
                 // 通信相手と切断したことにReceive関数の関数値は0が返されます.
 				if (recvSize == 0) {
 					// 切断します.
@@ -375,7 +414,7 @@ public class TransportUDP : MonoBehaviour {
 				}
 				else if (recvSize > 0) {
 	               	// ゲームスレッド側に受信したデータを渡すために受信データをキューに追加します.
- 					m_recvQueue.Enqueue(buffer, recvSize);
+ 					m_recvQueue.Enqueue(m_recvBuffer, recvSize);
 					// 受信時刻を更新します.
 					m_ticker = DateTime.Now;
 				}
@@ -391,8 +430,8 @@ public class TransportUDP : MonoBehaviour {
 	{
 		TimeSpan ts = DateTime.Now - m_ticker;
 
-		if (m_isConnected && ts.Seconds > m_timeOutSec) {
-			Debug.Log("Disconnect because of timeout.");
+		if (m_isConnected && ts.TotalSeconds > m_timeOutSec) {
+			Debug.Log("タイムアウトによる切断.");
 			// タイムアウトする時間までにデータが届かなかった.
 			// 理解を簡単にするために,あえて通信スレッドからメインスレッドを呼び出しています.
 			// 本来ならば切断リクエストを発行して,メインスレッド側でリクエストを監視して.

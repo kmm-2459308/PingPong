@@ -1,4 +1,4 @@
-﻿#if true
+﻿#if false
 
 using UnityEngine;
 using System.Collections;
@@ -11,13 +11,17 @@ public struct MouseData
 {
     // 入力取得時のフレーム番号
     //・・・P.164
-    public int frame;
-    public bool mouseButtonLeft;
-    public bool mouseButtonRight;
 
-    public float mousePositionX;
-    public float mousePositionY;
-    public float mousePositionZ;
+    // 左クリック状態
+    //・・・P.164
+
+    // 右クリック状態
+    //・・・P.164
+
+    // マウス座標（ワールド座標）
+    //・・・P.164
+
+
 
     // デバッグ表示用
     public override string ToString()
@@ -41,11 +45,9 @@ public struct MouseData
 /// （複数フレーム分をまとめて送る場合などに利用）
 /// </summary>
 public struct InputData
-{
+{   
     //・・・P.167
-    public int count;
-    public int flag;
-    public MouseData[] datum;
+
 };
 
 /// <summary>

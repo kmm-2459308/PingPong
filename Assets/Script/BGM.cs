@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿// ゲーム開始から音楽を再生、FadeOut()を外部で呼ばれてフェードアウトするだけ
+
+using UnityEngine;
 using System.Collections;
 
 public class BGM : MonoBehaviour {

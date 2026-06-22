@@ -7,7 +7,7 @@
 // Deserialize() 関数にバイナリデータをパケットの構造にシリアライズする処理を記述しています.
 //
 
-#if true
+#if false
 
 using UnityEngine;
 using System.Collections;
@@ -17,37 +17,15 @@ using System.Collections;
 public class MouseSerializer : Serializer
 {
 
-	// 各要素を順番にシリアライズします
-	//・・・P.158
-	public bool Serialize(MouseData packet)
-	{
-		bool ret = true;
-		ret &= Serialize(packet.frame);
-		ret &= Serialize(packet.mouseButtonLeft);
-		ret &= Serialize(packet.mouseButtonRight);
-		ret &= Serialize(packet.mousePositionX);
-		ret &= Serialize(packet.mousePositionY);
-		ret &= Serialize(packet.mousePositionZ);
-		return ret;
-	}
-    // データの要素ごとにデシリアライズします.
-    //・・・P.159
-	public bool Deserialize(byte[] data,ref MouseData serialized)
-	{
-        bool ret = SetDeserializedData(data);
-        if (ret == false)
-        {
-            return false;
-        }
+    // 各要素を順番にシリアライズします
+    //・・・P.158
 
-        ret &= Deserialize(ref serialized.frame);
-        ret &= Deserialize(ref serialized.mouseButtonLeft);
-        ret &= Deserialize(ref serialized.mouseButtonRight);
-        ret &= Deserialize(ref serialized.mousePositionX);
-        ret &= Deserialize(ref serialized.mousePositionY);
-        ret &= Deserialize(ref serialized.mousePositionZ);
-        return ret;
-    }
+
+
+
+    // データの要素ごとにデシリアライズします.
+	//・・・P.159
+
 
 }
 
@@ -58,23 +36,11 @@ public class InputSerializer : Serializer
 	public bool Serialize(InputData data)
 	{
 		//・・・P.173
-		Clear();
-		bool ret = true;
-		ret &= Serialize(data.count);
-		ret &= Serialize(data.flag);
-		MouseSerializer mouse = new MouseSerializer();
-		for(int i = 0;i<data.datum.Length;++i)
-		{
-			mouse.Clear();
 
-			bool ans = mouse.Serialize(data.datum[i]);
-			if(ans == false)
-			{
-				return false;
-			}
-			byte[] buffer = mouse.GetSerializedData();
-			ret &= Serialize(buffer, buffer.Length);
-		}
+
+
+
+
 
 		return ret;
 	}
@@ -83,29 +49,6 @@ public class InputSerializer : Serializer
 	{
 		// デシリアライズするデータを設定します.
 		//・・・ P.175
-		bool ret = SetDeserializedData(data);
-		if(ret == false)
-		{
-			return false;
-		}
-		ret &= Deserialize(ref serialized.count);
-		ret &= Deserialize(ref serialized.flag);
-		MouseSerializer mouse = new MouseSerializer();
-		MouseData md = new MouseData();
-		mouse.Serialize(md);
-		byte[] buf = mouse.GetSerializedData();
-		int size = buf.Length;
-
-		serialized.datum = new MouseData[serialized.count];
-		for(int i = 0;i<serialized.count;++i)
-		{
-			serialized.datum[i] = new MouseData();
-		}
-        for (int i = 0; i < serialized.count; ++i)
-        {
-			byte[] buffer = new byte[size];
-			bool ans = Deserialize(ref buffer, size);
-        }
 
 
 
@@ -114,7 +57,17 @@ public class InputSerializer : Serializer
 
 
 
-        return ret;
+
+
+
+
+
+
+
+
+
+
+		return ret;
 	}
 }
 

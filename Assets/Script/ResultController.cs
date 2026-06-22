@@ -1,4 +1,491 @@
-﻿using UnityEngine;
+﻿// リザルト表現
+/*
+ ■ ResultController の役割
+
+リザルト画面（結果発表画面）の演出を管理するクラス。
+
+主な流れ
+
+1. リザルト背景表示
+2. 寿司ごとの得点表示
+3. 合計得点表示
+4. 勝敗表示（WIN / LOSE）
+5. リザルト終了
+
+
+
+■ 変数の役割
+
+public GameObject m_winPrefab;
+
+勝利表示（WIN）のプレハブ。
+
+
+public GameObject m_losePrefab;
+
+敗北表示（LOSE）のプレハブ。
+
+
+GameObject m_winlose;
+
+現在表示中の WIN または LOSE オブジェクト。
+
+
+GameObject m_playerScore;
+GameObject m_opponentScore;
+
+プレイヤーと相手のスコア情報を持つオブジェクト。
+
+
+GameObject m_resultback;
+
+リザルト背景。
+
+
+GameObject m_resultPlayer;
+GameObject m_resultOpponent;
+
+合計得点表示用オブジェクト。
+
+
+GameObject[] m_playerIcons;
+GameObject[] m_opponentIcons;
+
+寿司ごとのスコア表示アイコン。
+
+配列の中身
+
+[0] tamago
+[1] ebi
+[2] ikura
+[3] toro
+
+
+int m_resultAnimationIndex;
+
+現在何番目の寿司スコアを表示中か管理。
+
+
+
+■ State列挙型
+
+enum State
+{
+    In,
+    ScoreWait,
+    TotalScore,
+    WinLose,
+    End
+}
+
+リザルト画面の状態管理。
+
+
+In
+
+リザルト画面入場。
+
+
+ScoreWait
+
+寿司ごとのスコア表示中。
+
+
+TotalScore
+
+合計得点表示中。
+
+
+WinLose
+
+勝敗表示中。
+
+
+End
+
+リザルト終了。
+
+
+
+■ Start()
+
+開始時に呼ばれる。
+
+m_state = State.In;
+
+最初は入場状態。
+
+
+GameObject.Find()
+
+で必要なオブジェクトを取得。
+
+・resultback
+・result_player
+・result_opponent
+・PlayerScore
+・OpponentScore
+
+
+寿司アイコン取得
+
+string[] names =
+{
+    "tamago",
+    "ebi",
+    "ikura",
+    "toro"
+};
+
+ループで
+
+tamago_player
+tamago_opponent
+
+などを取得して配列へ保存。
+
+
+
+■ プレイヤー位置調整
+
+PlayerInfo playerInfo =
+    PlayerInfo.GetInstance();
+
+if(playerInfo.GetPlayerId() != 0)
+
+クライアント側なら
+
+server_icon
+client_icon
+
+の位置を入れ替える。
+
+
+最初はアイコン非表示
+
+enabled = false;
+
+
+
+■ FixedUpdate()
+
+状態ごとに処理を実行。
+
+switch(m_state)
+
+
+
+==================================
+State.In
+==================================
+
+リザルト背景のフェードイン待ち。
+
+if(animation.isPlaying == false)
+
+アニメーション終了。
+
+
+サーバー・クライアントアイコン表示。
+
+enabled = true
+
+
+カウントアップSE再生。
+
+Play()
+
+
+次状態へ。
+
+m_state = State.ScoreWait
+
+
+
+==================================
+State.ScoreWait
+==================================
+
+UpdateScoreWait()
+
+を実行。
+
+
+最後の寿司スコア表示が終了したら
+
+prs.IsEnd()
+ors.IsEnd()
+
+両方 true。
+
+
+合計得点を計算して表示。
+
+m_resultPlayer.GetComponent<Number>()
+    .SetNum(...);
+
+m_resultOpponent.GetComponent<Number>()
+    .SetNum(...);
+
+
+合計得点アニメーション開始。
+
+Play("ResultScore")
+
+
+SE再生。
+
+PlayDelayed(0.75f)
+
+
+カウントアップSE停止。
+
+Stop()
+
+
+次状態へ。
+
+m_state = State.TotalScore
+
+
+
+==================================
+State.TotalScore
+==================================
+
+合計得点アニメーション終了待ち。
+
+if(pAnim.isPlaying == false &&
+   oAnim.isPlaying == false)
+
+終了したら
+
+m_state = State.WinLose
+
+
+
+==================================
+State.WinLose
+==================================
+
+まだWIN/LOSEが生成されていない場合
+
+if(m_winlose == null)
+
+勝敗判定。
+
+
+プレイヤー得点 < 相手得点
+
+なら
+
+Instantiate(m_losePrefab)
+
+負け。
+
+
+それ以外
+
+Instantiate(m_winPrefab)
+
+勝ち。
+
+
+生成したオブジェクト名
+
+winlose
+
+
+アニメーション終了待ち。
+
+if(animation.isPlaying == false)
+
+表示終了なら
+
+Destroy(m_winlose)
+
+削除。
+
+
+次状態へ。
+
+m_state = State.End
+
+
+
+==================================
+State.End
+==================================
+
+リザルト終了。
+
+
+
+■ UpdateScoreWait()
+
+寿司ごとの得点演出を順番に表示する。
+
+
+----------------------------------
+1回目
+----------------------------------
+
+m_resultAnimationIndex == 0
+
+なら
+
+たまご寿司の表示開始。
+
+
+取得数
+
+GetCount(SushiType.tamago)
+
+得点
+
+個数 × 8
+
+
+FadeIn()
+
+で表示開始。
+
+
+表示開始後
+
+m_resultAnimationIndex = 1
+
+
+
+----------------------------------
+2回目以降
+----------------------------------
+
+前の寿司の表示終了待ち。
+
+if(prs.IsEnd() && ors.IsEnd())
+
+終了したら次の寿司へ。
+
+
+寿司種類
+
+tamago
+ebi
+ikura
+toro
+
+
+点数
+
+8点
+10点
+12点
+15点
+
+
+例
+
+えびを3個
+
+3 × 10
+
+= 30点
+
+
+FadeIn()
+
+で表示開始。
+
+
+次のインデックスへ。
+
+m_resultAnimationIndex++
+
+
+
+■ GetResultScore()
+
+合計得点計算。
+
+
+寿司ごとの点数
+
+tamago = 8点
+ebi    = 10点
+ikura  = 12点
+toro   = 15点
+
+
+例
+
+tamago 2個 = 16点
+ebi    3個 = 30点
+ikura  1個 = 12点
+toro   2個 = 30点
+
+合計
+
+16 + 30 + 12 + 30
+
+= 88点
+
+
+return result;
+
+で返す。
+
+
+
+■ IsEnd()
+
+public bool IsEnd()
+{
+    return (m_state == State.End);
+}
+
+リザルト終了判定。
+
+
+他スクリプトから
+
+if(resultController.IsEnd())
+{
+    // タイトルへ戻る
+}
+
+のように使用できる。
+
+
+
+■ リザルト全体の流れ
+
+In
+↓
+ScoreWait
+↓
+TotalScore
+↓
+WinLose
+↓
+End
+
+
+画面表示の流れ
+
+背景表示
+↓
+寿司ごとの得点表示
+↓
+合計得点表示
+↓
+WIN / LOSE表示
+↓
+終了
+ */
+
+
+using UnityEngine;
 using System.Collections;
 
 public class ResultController : MonoBehaviour {
